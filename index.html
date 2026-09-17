@@ -11,7 +11,7 @@
     h1{font-size:21px;margin:0 0 5px}.sub{font-size:12px;color:#666;margin-bottom:20px}.field{margin:14px 0}label{display:block;font-size:12px;font-weight:700;margin-bottom:6px}
     input,select,button{width:100%;font:inherit}input,select{border:1px solid #bbb;border-radius:7px;padding:9px;background:white}.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .label-help{display:flex;align-items:center;gap:6px}.tip{position:relative;display:inline-grid;place-items:center;width:17px;height:17px;border:1px solid #999;border-radius:50%;font-size:11px;font-weight:700;color:#555;cursor:help;outline:none}.tip-text{visibility:hidden;opacity:0;position:absolute;z-index:10;left:50%;bottom:calc(100% + 9px);transform:translateX(-50%);width:220px;padding:9px 10px;border-radius:7px;background:#222;color:#fff;font-size:11px;font-weight:400;line-height:1.4;box-shadow:0 5px 16px #0003;transition:opacity .12s}.tip-text:after{content:"";position:absolute;top:100%;left:50%;margin-left:-5px;border:5px solid transparent;border-top-color:#222}.tip:hover .tip-text,.tip:focus .tip-text{visibility:visible;opacity:1}
-    .check{display:flex;gap:8px;align-items:center;font-size:13px}.check input{width:auto}.buttons{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:20px}
+    .check{display:flex;gap:8px;align-items:center;font-size:13px}.check input{width:auto}.buttons{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:20px}.buttons .primary{grid-column:1/-1}
     button{border:0;border-radius:8px;padding:11px;font-weight:700;cursor:pointer;background:#222;color:#fff}button.secondary{background:#ddd;color:#222}button:disabled{opacity:.45;cursor:not-allowed}
     #preview{flex:1;display:flex;align-items:center;justify-content:center;overflow:auto;background:linear-gradient(45deg,#eee 25%,transparent 25%),linear-gradient(-45deg,#eee 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#eee 75%),linear-gradient(-45deg,transparent 75%,#eee 75%);background-size:20px 20px;background-position:0 0,0 10px,10px -10px,-10px 0;border-radius:9px}
     #preview svg{max-width:100%;max-height:590px;background:var(--preview-bg,#fff)}#preview svg circle{fill:var(--hole-colour,#000)}.empty{color:#777;text-align:center;padding:40px}.report{font-size:12px;color:#444;margin-top:12px;line-height:1.55}.warning{color:#a34500}.legend{display:flex;gap:13px;flex-wrap:wrap;font-size:11px;margin-top:10px}.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--hole-colour,#111);margin-right:4px}.colour-control{display:flex;align-items:center;gap:10px}.colour-control input[type="color"]{width:48px;height:38px;padding:3px;cursor:pointer}.colour-value{font-size:12px;color:#666;font-family:monospace}
@@ -21,7 +21,7 @@
 <body>
 <main class="app">
   <section class="panel">
-    <h1>Perforation Mapper</h1><div class="sub">Manufacturing-constrained halftone → Illustrator SVG</div>
+    <h1>Perforation Mapper</h1><div class="sub">Manufacturing-constrained halftone → SVG / DXF</div>
     <div class="field"><label for="image">REFERENCE IMAGE (PNG/JPG)</label><input id="image" type="file" accept="image/png,image/jpeg,image/webp"></div>
     <div class="field"><label for="sizes">APPROVED HOLE DIAMETERS (mm)</label><input id="sizes" value="0.8, 1.0, 1.2, 1.5"></div>
     <div class="row">
@@ -38,11 +38,11 @@
     </div>
     <div class="row">
       <div class="field"><div class="label-help"><label for="backgroundColour">BACKGROUND COLOUR</label><span class="tip" tabindex="0" aria-label="Preview background information">?<span class="tip-text" role="tooltip">Simulates the leather colour in the preview. It is not exported into the production SVG.</span></span></div><div class="colour-control"><input id="backgroundColour" type="color" value="#d8c3a5"><span id="backgroundValue" class="colour-value">#D8C3A5</span></div></div>
-      <div class="field"><div class="label-help"><label for="holeColour">HOLE COLOUR</label><span class="tip" tabindex="0" aria-label="Hole colour information">?<span class="tip-text" role="tooltip">Changes the perforation colour in the preview and the SVG. The circles remain editable in Illustrator.</span></span></div><div class="colour-control"><input id="holeColour" type="color" value="#000000"><span id="holeValue" class="colour-value">#000000</span></div></div>
+      <div class="field"><div class="label-help"><label for="holeColour">HOLE COLOUR</label><span class="tip" tabindex="0" aria-label="Hole colour information">?<span class="tip-text" role="tooltip">Changes the perforation colour in the preview and the SVG. DXF export uses true CIRCLE entities grouped by diameter.</span></span></div><div class="colour-control"><input id="holeColour" type="color" value="#000000"><span id="holeValue" class="colour-value">#000000</span></div></div>
     </div>
     <div class="field check"><input id="invert" type="checkbox"><label for="invert" style="margin:0">Invert tone (light areas get larger holes)</label></div>
     <div class="field check"><input id="ignoreAlpha" type="checkbox" checked><label for="ignoreAlpha" style="margin:0">Ignore transparent pixels</label></div>
-    <div class="buttons"><button id="generate">Generate preview</button><button id="download" class="secondary" disabled>Download SVG</button></div>
+    <div class="buttons"><button id="generate" class="primary">Generate preview</button><button id="download" class="secondary" disabled>Download SVG</button><button id="downloadDxf" class="secondary" disabled>Download DXF</button></div>
     <div id="report" class="report">Load an image to begin.</div>
   </section>
   <section class="stage"><div id="preview"><div class="empty">Your perforation preview will appear here.<br>Transparent and light areas can define the boundary.</div></div><div id="legend" class="legend"></div></section>
@@ -50,7 +50,8 @@
 <canvas id="sampler" hidden></canvas>
 <script>
 (() => {
-  const $ = id => document.getElementById(id), state={img:null,svg:'',name:'perforation-pattern'};
+  const $ = id => document.getElementById(id), state={img:null,svg:'',dxf:'',name:'perforation-pattern'};
+  function setDownloads(enabled){$('download').disabled=!enabled;$('downloadDxf').disabled=!enabled}
   function updateBackground(){const colour=$('backgroundColour').value;$('preview').style.setProperty('--preview-bg',colour);$('backgroundValue').textContent=colour.toUpperCase()}
   $('backgroundColour').addEventListener('input',updateBackground);updateBackground();
   function updateHoleColour(){const colour=$('holeColour').value;$('preview').style.setProperty('--hole-colour',colour);$('legend').style.setProperty('--hole-colour',colour);$('holeValue').textContent=colour.toUpperCase()}
@@ -58,6 +59,46 @@
   $('image').addEventListener('change', e=>{const f=e.target.files[0];if(!f)return;const u=URL.createObjectURL(f),im=new Image();im.onload=()=>{state.img=im;state.name=f.name.replace(/\.[^.]+$/,'')+'-perforation';URL.revokeObjectURL(u);$('report').textContent=`Loaded ${im.naturalWidth} × ${im.naturalHeight}px.`;};im.src=u;});
   function number(id,min,max){const v=parseFloat($(id).value);if(!Number.isFinite(v)||v<min||v>max)throw Error(`${id} is outside its valid range.`);return v}
   function esc(s){return s.replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+  function layerName(size){return 'DIA_'+String(size).replace('.','_')+'_MM'}
+  function buildSvg(width,height,sizes,groups,holeColour,meta){
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}mm" height="${height.toFixed(3)}mm" viewBox="0 0 ${width} ${height.toFixed(3)}"><title>${esc(meta)}</title><desc>Editable vector perforations grouped by approved diameter. Units are millimetres.</desc>${groups.map((g,i)=>`<g id="${layerName(sizes[i])}" fill="${holeColour}">${g.map(h=>`<circle cx="${h.x.toFixed(3)}" cy="${h.y.toFixed(3)}" r="${h.r.toFixed(3)}"/>`).join('')}</g>`).join('')}</svg>`;
+  }
+  function buildDxf(width,height,sizes,groups,meta){
+    const lines=[];
+    const p=(code,value)=>{lines.push(String(code),String(value))};
+    p(0,'SECTION');p(2,'HEADER');
+    p(9,'$ACADVER');p(1,'AC1015');
+    p(9,'$INSUNITS');p(70,4);
+    p(9,'$MEASUREMENT');p(70,1);
+    p(9,'$EXTMIN');p(10,0);p(20,0);p(30,0);
+    p(9,'$EXTMAX');p(10,width.toFixed(3));p(20,height.toFixed(3));p(30,0);
+    p(0,'ENDSEC');
+    p(0,'SECTION');p(2,'TABLES');
+    p(0,'TABLE');p(2,'LTYPE');p(70,1);
+    p(0,'LTYPE');p(2,'CONTINUOUS');p(70,0);p(3,'Solid line');p(72,65);p(73,0);p(40,0);
+    p(0,'ENDTAB');
+    p(0,'TABLE');p(2,'LAYER');p(70,sizes.length+1);
+    p(0,'LAYER');p(2,'STOCK');p(70,0);p(62,8);p(6,'CONTINUOUS');
+    sizes.forEach((s,i)=>{p(0,'LAYER');p(2,layerName(s));p(70,0);p(62,7-i);p(6,'CONTINUOUS')});
+    p(0,'ENDTAB');p(0,'ENDSEC');
+    p(0,'SECTION');p(2,'BLOCKS');p(0,'ENDSEC');
+    p(0,'SECTION');p(2,'ENTITIES');
+    p(999,meta);
+    p(0,'LWPOLYLINE');p(8,'STOCK');p(90,4);p(70,1);
+    p(10,0);p(20,0);p(10,width.toFixed(3));p(20,0);p(10,width.toFixed(3));p(20,height.toFixed(3));p(10,0);p(20,height.toFixed(3));
+    groups.forEach((g,i)=>{
+      const layer=layerName(sizes[i]);
+      g.forEach(h=>{
+        p(0,'CIRCLE');p(8,layer);
+        p(10,h.x.toFixed(3));p(20,(height-h.y).toFixed(3));p(30,0);p(40,h.r.toFixed(3));
+      });
+    });
+    p(0,'ENDSEC');p(0,'EOF');
+    return lines.join('\r\n')+'\r\n';
+  }
+  function downloadFile(filename,text,type){
+    const blob=new Blob([text],{type}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  }
   function generate(){
     try{
       if(!state.img)throw Error('Choose a reference image first.');
@@ -75,20 +116,22 @@
           const lum=(.2126*pix[i]+.7152*pix[i+1]+.0722*pix[i+2])/255;let darkness=$('invert').checked?lum:1-lum;darkness*=a;
           if(darkness<=cutoff){light++;continue}let norm=(darkness-cutoff)/(1-cutoff),idx=Math.min(sizes.length-1,Math.floor(norm*sizes.length));
           while(idx>=0&&sizes[idx]+minWeb>pitch){idx--;webAdjusted++}if(idx<0)continue;
-          const d=sizes[idx],r=d/2;groups[idx].push(`<circle cx="${x.toFixed(3)}" cy="${y.toFixed(3)}" r="${r.toFixed(3)}"/>`);counts[idx]++;total++;
+          groups[idx].push({x,y,r:sizes[idx]/2});counts[idx]++;total++;
         }
       }
-      if(total>50000)throw Error(`Result contains ${total.toLocaleString()} circles. Increase pitch to keep the Illustrator file manageable (maximum 50,000).`);
-      const meta=esc(`Perforation Mapper | sizes ${sizes.join(', ')} mm | pitch ${pitch} mm | ${$('layout').value}`);
+      if(total>50000)throw Error(`Result contains ${total.toLocaleString()} circles. Increase pitch to keep the file manageable (maximum 50,000).`);
+      const meta=`Perforation Mapper | sizes ${sizes.join(', ')} mm | pitch ${pitch} mm | ${$('layout').value}`;
       const holeColour=$('holeColour').value;
-      state.svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${width}mm" height="${height.toFixed(3)}mm" viewBox="0 0 ${width} ${height.toFixed(3)}"><title>${meta}</title><desc>Editable vector perforations grouped by approved diameter. Units are millimetres.</desc>${groups.map((g,i)=>`<g id="DIA_${String(sizes[i]).replace('.','_')}_MM" fill="${holeColour}">${g.join('')}</g>`).join('')}</svg>`;
-      $('preview').innerHTML=state.svg;$('download').disabled=false;
+      state.svg=buildSvg(width,height,sizes,groups,holeColour,meta);
+      state.dxf=buildDxf(width,height,sizes,groups,meta);
+      $('preview').innerHTML=state.svg;setDownloads(true);
       $('legend').innerHTML=sizes.map((s,i)=>`<span><i class="dot"></i>Ø${s} mm: ${counts[i].toLocaleString()}</span>`).join('');
       $('report').innerHTML=`<b>${total.toLocaleString()} holes generated</b><br>Artwork: ${width.toFixed(1)} × ${height.toFixed(1)} mm<br>${light.toLocaleString()} light samples omitted · ${transparent.toLocaleString()} transparent samples omitted${webAdjusted?`<br><span class="warning">${webAdjusted.toLocaleString()} size choices reduced/rejected by minimum web rule.</span>`:''}`;
-    }catch(err){$('report').innerHTML=`<span class="warning">${esc(err.message)}</span>`;$('download').disabled=true}
+    }catch(err){$('report').innerHTML=`<span class="warning">${esc(err.message)}</span>`;setDownloads(false)}
   }
   $('generate').addEventListener('click',generate);
-  $('download').addEventListener('click',()=>{if(!state.svg)return;const blob=new Blob([state.svg],{type:'image/svg+xml'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=state.name+'.svg';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)});
+  $('download').addEventListener('click',()=>{if(state.svg)downloadFile(state.name+'.svg',state.svg,'image/svg+xml')});
+  $('downloadDxf').addEventListener('click',()=>{if(state.dxf)downloadFile(state.name+'.dxf',state.dxf,'application/dxf')});
 })();
 </script>
 </body>
