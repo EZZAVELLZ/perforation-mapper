@@ -14,7 +14,11 @@
     .check{display:flex;gap:8px;align-items:center;font-size:13px}.check input{width:auto}.buttons{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:20px}.buttons .primary{grid-column:1/-1}
     button{border:0;border-radius:8px;padding:11px;font-weight:700;cursor:pointer;background:#222;color:#fff}button.secondary{background:#ddd;color:#222}button:disabled{opacity:.45;cursor:not-allowed}
     #preview{flex:1;display:flex;align-items:center;justify-content:center;overflow:auto;background:linear-gradient(45deg,#eee 25%,transparent 25%),linear-gradient(-45deg,#eee 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#eee 75%),linear-gradient(-45deg,transparent 75%,#eee 75%);background-size:20px 20px;background-position:0 0,0 10px,10px -10px,-10px 0;border-radius:9px}
-    #preview svg{max-width:100%;max-height:590px;background:var(--preview-bg,#fff)}#preview svg circle{fill:var(--hole-colour,#000)}.empty{color:#777;text-align:center;padding:40px}.report{font-size:12px;color:#444;margin-top:12px;line-height:1.55}.warning{color:#a34500}.legend{display:flex;gap:13px;flex-wrap:wrap;font-size:11px;margin-top:10px}.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--hole-colour,#111);margin-right:4px}.colour-control{display:flex;align-items:center;gap:10px}.colour-control input[type="color"]{width:48px;height:38px;padding:3px;cursor:pointer}.colour-value{font-size:12px;color:#666;font-family:monospace}
+    #preview svg{max-width:100%;max-height:590px;background:var(--preview-bg,#000)}#preview svg circle{fill:var(--hole-colour,#fff)}.empty{color:#777;text-align:center;padding:40px}.report{font-size:12px;color:#444;margin-top:12px;line-height:1.55}.warning{color:#a34500}.legend{display:flex;gap:13px;flex-wrap:wrap;font-size:11px;margin-top:10px}.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--hole-colour,#fff);margin-right:4px;box-shadow:inset 0 0 0 1px #0003}    .colour-control{display:flex;align-items:center;gap:10px}.colour-control input[type="color"]{width:48px;height:38px;padding:3px;cursor:pointer}.colour-value{font-size:12px;color:#666;font-family:monospace}
+    .thumb{display:none;width:100%;max-height:280px;object-fit:contain;background:#111;border-radius:7px;cursor:crosshair;margin-top:8px}.thumb.on{display:block}.thumb.picking{outline:2px solid #222;outline-offset:2px}
+    .pick-hint{font-size:11px;color:#666;margin-top:6px}
+    .ignore-head{display:flex;align-items:center;gap:8px}.ignore-head input[type="checkbox"]{width:auto}.ignore-head input[type="color"]{width:48px;height:38px;padding:3px;cursor:pointer}.ignore-head button.compact{width:auto;flex:1;padding:9px 12px}
+    .slider-row{display:grid;grid-template-columns:86px 1fr 38px;gap:8px;align-items:center;margin-top:8px}.slider-row label{margin:0;font-size:10px}.slider-row input[type="range"]{padding:0;border:0;height:18px;accent-color:#222}.slider-row span{font-size:11px;color:#666;text-align:right;font-variant-numeric:tabular-nums}
     @media(max-width:800px){body{padding:10px}.app{grid-template-columns:1fr}.stage{min-height:450px}}
   </style>
 </head>
@@ -22,10 +26,29 @@
 <main class="app">
   <section class="panel">
     <h1>Perforation Mapper</h1><div class="sub">Manufacturing-constrained halftone → SVG / DXF</div>
-    <div class="field"><label for="image">REFERENCE IMAGE (PNG/JPG)</label><input id="image" type="file" accept="image/png,image/jpeg,image/webp"></div>
-    <div class="field"><label for="sizes">APPROVED HOLE DIAMETERS (mm)</label><input id="sizes" value="0.8, 1.0, 1.2, 1.5"></div>
+    <div class="field">
+      <label for="image">REFERENCE IMAGE (PNG/JPG)</label>
+      <input id="image" type="file" accept="image/png,image/jpeg,image/webp">
+      <img id="sourceThumb" class="thumb" alt="Click to sample a colour to ignore">
+      <div class="pick-hint" id="thumbHint" hidden>Click the image to pick a colour to ignore.</div>
+    </div>
+    <div class="field">
+      <div class="label-help"><label for="ignoreColour">IGNORE COLOUR</label><span class="tip" tabindex="0" aria-label="Ignore colour information">?<span class="tip-text" role="tooltip">Omit samples close to a picked colour. Hue, saturation and tone sliders set how wide the match is. Hue is ignored for greys, black and white.</span></span></div>
+      <div class="ignore-head">
+        <input id="ignoreColour" type="checkbox">
+        <input id="ignoreSwatch" type="color" value="#ffffff" aria-label="Colour to ignore">
+        <span id="ignoreHex" class="colour-value">#FFFFFF</span>
+        <button type="button" id="eyedropper" class="secondary compact">Eyedropper</button>
+      </div>
+      <div id="ignoreRanges" hidden>
+        <div class="slider-row"><label for="hueRange">HUE</label><input id="hueRange" type="range" min="0" max="180" value="18"><span id="hueRangeVal">18°</span></div>
+        <div class="slider-row"><label for="satRange">SATURATION</label><input id="satRange" type="range" min="0" max="100" value="25"><span id="satRangeVal">25%</span></div>
+        <div class="slider-row"><label for="toneRange">TONE</label><input id="toneRange" type="range" min="0" max="100" value="18"><span id="toneRangeVal">18%</span></div>
+      </div>
+    </div>
+    <div class="field"><label for="sizes">APPROVED HOLE DIAMETERS (mm)</label><input id="sizes" value="0.8, 1.0, 1.2"></div>
     <div class="row">
-      <div class="field"><label for="width">OUTPUT WIDTH (mm)</label><input id="width" type="number" min="1" step="1" value="200"></div>
+      <div class="field"><label for="width">OUTPUT WIDTH (mm)</label><input id="width" type="number" min="1" step="1" value="500"></div>
       <div class="field"><div class="label-help"><label for="pitch">PITCH (mm)</label><span class="tip" tabindex="0" aria-label="Pitch information">?<span class="tip-text" role="tooltip">Hole centre to hole centre: the distance between the centre points of neighbouring holes.</span></span></div><input id="pitch" type="number" min="0.1" step="0.1" value="3"></div>
     </div>
     <div class="row">
@@ -37,8 +60,8 @@
       <div class="field"><label for="alpha">ALPHA CUTOFF (%)</label><input id="alpha" type="number" min="0" max="100" step="1" value="10"></div>
     </div>
     <div class="row">
-      <div class="field"><div class="label-help"><label for="backgroundColour">BACKGROUND COLOUR</label><span class="tip" tabindex="0" aria-label="Preview background information">?<span class="tip-text" role="tooltip">Simulates the leather colour in the preview. It is not exported into the production SVG.</span></span></div><div class="colour-control"><input id="backgroundColour" type="color" value="#d8c3a5"><span id="backgroundValue" class="colour-value">#D8C3A5</span></div></div>
-      <div class="field"><div class="label-help"><label for="holeColour">HOLE COLOUR</label><span class="tip" tabindex="0" aria-label="Hole colour information">?<span class="tip-text" role="tooltip">Changes the perforation colour in the preview and the SVG. DXF export uses true CIRCLE entities grouped by diameter.</span></span></div><div class="colour-control"><input id="holeColour" type="color" value="#000000"><span id="holeValue" class="colour-value">#000000</span></div></div>
+      <div class="field"><div class="label-help"><label for="backgroundColour">BACKGROUND COLOUR</label><span class="tip" tabindex="0" aria-label="Preview background information">?<span class="tip-text" role="tooltip">Simulates the leather colour in the preview. It is not exported into the production SVG.</span></span></div><div class="colour-control"><input id="backgroundColour" type="color" value="#000000"><span id="backgroundValue" class="colour-value">#000000</span></div></div>
+      <div class="field"><div class="label-help"><label for="holeColour">HOLE COLOUR</label><span class="tip" tabindex="0" aria-label="Hole colour information">?<span class="tip-text" role="tooltip">Changes the perforation colour in the preview and the SVG. DXF export uses true CIRCLE entities grouped by diameter.</span></span></div><div class="colour-control"><input id="holeColour" type="color" value="#ffffff"><span id="holeValue" class="colour-value">#FFFFFF</span></div></div>
     </div>
     <div class="field check"><input id="invert" type="checkbox"><label for="invert" style="margin:0">Invert tone (light areas get larger holes)</label></div>
     <div class="field check"><input id="ignoreAlpha" type="checkbox" checked><label for="ignoreAlpha" style="margin:0">Ignore transparent pixels</label></div>
@@ -50,13 +73,87 @@
 <canvas id="sampler" hidden></canvas>
 <script>
 (() => {
-  const $ = id => document.getElementById(id), state={img:null,svg:'',dxf:'',name:'perforation-pattern'};
+  const $ = id => document.getElementById(id), state={img:null,svg:'',dxf:'',name:'perforation-pattern',imageUrl:null};
+  const pickCanvas=document.createElement('canvas');
   function setDownloads(enabled){$('download').disabled=!enabled;$('downloadDxf').disabled=!enabled}
   function updateBackground(){const colour=$('backgroundColour').value;$('preview').style.setProperty('--preview-bg',colour);$('backgroundValue').textContent=colour.toUpperCase()}
   $('backgroundColour').addEventListener('input',updateBackground);updateBackground();
   function updateHoleColour(){const colour=$('holeColour').value;$('preview').style.setProperty('--hole-colour',colour);$('legend').style.setProperty('--hole-colour',colour);$('holeValue').textContent=colour.toUpperCase()}
   $('holeColour').addEventListener('input',updateHoleColour);updateHoleColour();
-  $('image').addEventListener('change', e=>{const f=e.target.files[0];if(!f)return;const u=URL.createObjectURL(f),im=new Image();im.onload=()=>{state.img=im;state.name=f.name.replace(/\.[^.]+$/,'')+'-perforation';URL.revokeObjectURL(u);$('report').textContent=`Loaded ${im.naturalWidth} × ${im.naturalHeight}px.`;};im.src=u;});
+  function hexToRgb(hex){const n=hex.replace('#','');return {r:parseInt(n.slice(0,2),16),g:parseInt(n.slice(2,4),16),b:parseInt(n.slice(4,6),16)}}
+  function rgbToHex(r,g,b){return '#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('')}
+  function rgbToHsl(r,g,b){
+    r/=255;g/=255;b/=255;
+    const max=Math.max(r,g,b),min=Math.min(r,g,b),l=(max+min)/2;
+    if(max===min) return {h:0,s:0,l:l*100};
+    const d=max-min,s=l>0.5?d/(2-max-min):d/(max+min);
+    let h=max===r?(g-b)/d+(g<b?6:0):max===g?(b-r)/d+2:(r-g)/d+4;
+    return {h:h*60,s:s*100,l:l*100};
+  }
+  function colourMatches(r,g,b,target,hueRange,satRange,toneRange){
+    const hsl=rgbToHsl(r,g,b);
+    if(Math.abs(hsl.s-target.s)>satRange) return false;
+    if(Math.abs(hsl.l-target.l)>toneRange) return false;
+    if(Math.min(hsl.s,target.s)<12) return true;
+    const dh=Math.abs(hsl.h-target.h);
+    return Math.min(dh,360-dh)<=hueRange;
+  }
+  function syncIgnoreRanges(){$('ignoreRanges').hidden=!$('ignoreColour').checked}
+  function setIgnoreColour(hex){
+    const colour=/^#[0-9a-fA-F]{6}$/.test(hex)?hex.toLowerCase():'#ffffff';
+    $('ignoreSwatch').value=colour;$('ignoreHex').textContent=colour.toUpperCase();
+    $('ignoreColour').checked=true;syncIgnoreRanges();$('sourceThumb').classList.remove('picking');
+  }
+  function bindSlider(id,suffix){
+    const update=()=>$(id+'Val').textContent=$(id).value+suffix;
+    $(id).addEventListener('input',update);update();
+  }
+  bindSlider('hueRange','°');bindSlider('satRange','%');bindSlider('toneRange','%');
+  $('ignoreColour').addEventListener('change',syncIgnoreRanges);syncIgnoreRanges();
+  $('ignoreSwatch').addEventListener('input',()=>setIgnoreColour($('ignoreSwatch').value));
+  function preparePickBuffer(){
+    if(!state.img) return;
+    const im=state.img,max=800,scale=Math.min(1,max/Math.max(im.naturalWidth,im.naturalHeight));
+    pickCanvas.width=Math.max(1,Math.round(im.naturalWidth*scale));
+    pickCanvas.height=Math.max(1,Math.round(im.naturalHeight*scale));
+    pickCanvas.getContext('2d',{willReadFrequently:true}).drawImage(im,0,0,pickCanvas.width,pickCanvas.height);
+  }
+  $('sourceThumb').addEventListener('click',e=>{
+    if(!state.img) return;
+    const img=e.currentTarget,rect=img.getBoundingClientRect();
+    const scale=Math.min(rect.width/img.naturalWidth,rect.height/img.naturalHeight);
+    const dw=img.naturalWidth*scale,dh=img.naturalHeight*scale;
+    const x=(e.clientX-(rect.left+(rect.width-dw)/2))/dw;
+    const y=(e.clientY-(rect.top+(rect.height-dh)/2))/dh;
+    if(x<0||y<0||x>1||y>1) return;
+    preparePickBuffer();
+    const px=Math.min(pickCanvas.width-1,Math.floor(x*pickCanvas.width));
+    const py=Math.min(pickCanvas.height-1,Math.floor(y*pickCanvas.height));
+    const d=pickCanvas.getContext('2d').getImageData(px,py,1,1).data;
+    setIgnoreColour(rgbToHex(d[0],d[1],d[2]));
+  });
+  $('eyedropper').addEventListener('click',async()=>{
+    if(window.EyeDropper){
+      try{
+        const result=await new EyeDropper().open();
+        setIgnoreColour(result.sRGBHex);
+      }catch(err){/* cancelled */}
+      return;
+    }
+    if(!state.img){$('report').innerHTML='<span class="warning">Load an image first, then click it to pick a colour.</span>';return}
+    $('sourceThumb').classList.add('picking');$('thumbHint').hidden=false;$('report').textContent='Click the reference image to pick a colour to ignore.';
+  });
+  $('image').addEventListener('change', e=>{
+    const f=e.target.files[0];if(!f)return;
+    if(state.imageUrl) URL.revokeObjectURL(state.imageUrl);
+    const u=URL.createObjectURL(f),im=new Image();
+    im.onload=()=>{
+      state.img=im;state.imageUrl=u;state.name=f.name.replace(/\.[^.]+$/,'')+'-perforation';
+      const thumb=$('sourceThumb');thumb.src=u;thumb.classList.add('on');$('thumbHint').hidden=false;
+      $('report').textContent=`Loaded ${im.naturalWidth} × ${im.naturalHeight}px. Click the image to pick a colour to ignore.`;
+    };
+    im.src=u;
+  });
   function number(id,min,max){const v=parseFloat($(id).value);if(!Number.isFinite(v)||v<min||v>max)throw Error(`${id} is outside its valid range.`);return v}
   function esc(s){return s.replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
   function layerName(size){return 'DIA_'+String(size).replace('.','_')+'_MM'}
@@ -99,20 +196,33 @@
   function downloadFile(filename,text,type){
     const blob=new Blob([text],{type}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
   }
+  const HOLES_PER_SECOND=12.5,MAX_CANVAS=8192,MAX_SAMPLE_POSITIONS=10000000;
+  function formatMachineTime(holes){
+    const seconds=holes/HOLES_PER_SECOND;
+    if(seconds<60){
+      const rounded=seconds<10?Math.round(seconds*10)/10:Math.round(seconds);
+      return `${rounded} second${rounded===1?'':'s'}`;
+    }
+    const total=Math.round(seconds),h=Math.floor(total/3600),m=Math.floor((total%3600)/60),s=total%60;
+    if(h) return `${h} hour${h===1?'':'s'}${m?` ${m} minute${m===1?'':'s'}`:''}`;
+    return s?`${m} min ${s} s`:`${m} min`;
+  }
   function generate(){
     try{
       if(!state.img)throw Error('Choose a reference image first.');
       let sizes=$('sizes').value.split(/[ ,;/]+/).map(Number).filter(n=>Number.isFinite(n)&&n>0).sort((a,b)=>a-b);sizes=[...new Set(sizes)];if(sizes.length<1||sizes.length>8)throw Error('Enter between 1 and 8 valid hole sizes.');
       const width=number('width',1,5000),pitch=number('pitch',.1,100),minWeb=number('web',0,100),cutoff=number('cutoff',0,99)/100,alphaCut=number('alpha',0,100)/100;
+      const ignoreOn=$('ignoreColour').checked,ignoreRgb=hexToRgb($('ignoreSwatch').value),targetHsl=rgbToHsl(ignoreRgb.r,ignoreRgb.g,ignoreRgb.b),hueRange=number('hueRange',0,180),satRange=number('satRange',0,100),toneRange=number('toneRange',0,100);
       const height=width*state.img.naturalHeight/state.img.naturalWidth,rows=Math.ceil(height/pitch),cols=Math.ceil(width/pitch)+1;
-      if(rows*cols>100000)throw Error('This setup exceeds 100,000 sample positions. Increase pitch or reduce output size.');
-      const canvas=$('sampler');canvas.width=Math.max(1,Math.ceil(width/pitch)+2);canvas.height=Math.max(1,rows+2);const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.clearRect(0,0,canvas.width,canvas.height);ctx.drawImage(state.img,0,0,canvas.width,canvas.height);const pix=ctx.getImageData(0,0,canvas.width,canvas.height).data;
-      const groups=sizes.map(()=>[]),counts=sizes.map(()=>0);let transparent=0,light=0,webAdjusted=0,total=0;
+      if(rows*cols>MAX_SAMPLE_POSITIONS)throw Error('This setup is too dense for the browser to process without freezing. Increase pitch or reduce output size.');
+      const canvas=$('sampler');canvas.width=Math.min(MAX_CANVAS,Math.max(1,Math.ceil(width/pitch)+2));canvas.height=Math.min(MAX_CANVAS,Math.max(1,rows+2));const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.clearRect(0,0,canvas.width,canvas.height);ctx.drawImage(state.img,0,0,canvas.width,canvas.height);const pix=ctx.getImageData(0,0,canvas.width,canvas.height).data;
+      const groups=sizes.map(()=>[]),counts=sizes.map(()=>0);let transparent=0,light=0,colourIgnored=0,webAdjusted=0,total=0;
       for(let row=0;row<rows;row++){
         const y=(row+.5)*pitch;if(y>height)continue;const shift=$('layout').value==='staggered'&&row%2?pitch/2:0;
         for(let col=0;col<cols;col++){
           const x=(col+.5)*pitch+shift;if(x>width)continue;const px=Math.min(canvas.width-1,Math.max(0,Math.floor(x/width*canvas.width))),py=Math.min(canvas.height-1,Math.max(0,Math.floor(y/height*canvas.height))),i=(py*canvas.width+px)*4,a=pix[i+3]/255;
           if($('ignoreAlpha').checked&&a<=alphaCut){transparent++;continue}
+          if(ignoreOn&&colourMatches(pix[i],pix[i+1],pix[i+2],targetHsl,hueRange,satRange,toneRange)){colourIgnored++;continue}
           const lum=(.2126*pix[i]+.7152*pix[i+1]+.0722*pix[i+2])/255;let darkness=$('invert').checked?lum:1-lum;darkness*=a;
           if(darkness<=cutoff){light++;continue}let norm=(darkness-cutoff)/(1-cutoff),idx=Math.min(sizes.length-1,Math.floor(norm*sizes.length));
           while(idx>=0&&sizes[idx]+minWeb>pitch){idx--;webAdjusted++}if(idx<0)continue;
@@ -126,7 +236,7 @@
       state.dxf=buildDxf(width,height,sizes,groups,meta);
       $('preview').innerHTML=state.svg;setDownloads(true);
       $('legend').innerHTML=sizes.map((s,i)=>`<span><i class="dot"></i>Ø${s} mm: ${counts[i].toLocaleString()}</span>`).join('');
-      $('report').innerHTML=`<b>${total.toLocaleString()} holes generated</b><br>Artwork: ${width.toFixed(1)} × ${height.toFixed(1)} mm<br>${light.toLocaleString()} light samples omitted · ${transparent.toLocaleString()} transparent samples omitted${webAdjusted?`<br><span class="warning">${webAdjusted.toLocaleString()} size choices reduced/rejected by minimum web rule.</span>`:''}`;
+      $('report').innerHTML=`<b>${total.toLocaleString()} holes generated</b><br>Artwork: ${width.toFixed(1)} × ${height.toFixed(1)} mm<br>Estimated machine time: ${formatMachineTime(total)} at ${HOLES_PER_SECOND} holes/s<br>${light.toLocaleString()} light samples omitted · ${colourIgnored.toLocaleString()} colour-matched samples omitted · ${transparent.toLocaleString()} transparent samples omitted${webAdjusted?`<br><span class="warning">${webAdjusted.toLocaleString()} size choices reduced/rejected by minimum web rule.</span>`:''}`;
     }catch(err){$('report').innerHTML=`<span class="warning">${esc(err.message)}</span>`;setDownloads(false)}
   }
   $('generate').addEventListener('click',generate);
